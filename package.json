@@ -1,6 +1,6 @@
 {
   "name": "@triptyk/delegate-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generic multi-provider MCP delegate server for Claude Code. Sonnet orchestrates, cheap providers execute.",
   "type": "module",
   "bin": {
