@@ -19,7 +19,7 @@ function resolveConfigPath(): string {
   return join(xdg, "delegate-mcp", "providers.yaml");
 }
 
-function bootstrapConfig(configPath: string): never {
+function createStarterConfig(configPath: string): void {
   const exampleSrc = join(
     dirname(fileURLToPath(import.meta.url)),
     "..",
@@ -27,10 +27,26 @@ function bootstrapConfig(configPath: string): never {
   );
   mkdirSync(dirname(configPath), { recursive: true });
   copyFileSync(exampleSrc, configPath);
+}
+
+function bootstrapConfig(configPath: string): never {
+  createStarterConfig(configPath);
   throw new Error(
     `No config found — created a starter at ${configPath}.\n` +
       `Edit it, add your API keys to your environment, then restart.`,
   );
+}
+
+/**
+ * Creates the config file from the bundled example if it doesn't exist yet.
+ * Returns the resolved config path. Safe to call multiple times.
+ */
+export function initConfig(): string {
+  const path = resolveConfigPath();
+  if (!existsSync(path)) {
+    createStarterConfig(path);
+  }
+  return path;
 }
 
 export function loadConfig(): AppConfig {

@@ -34,17 +34,23 @@ delegate-mcp
 
 ## Install
 
-### 1. Configure
+### 1. Create the config
 
-On first run, delegate-mcp automatically creates `~/.config/delegate-mcp/providers.yaml` from the bundled example. Just open it and fill in your providers:
+```bash
+npx @triptyk/delegate-mcp init
+```
+
+This creates `~/.config/delegate-mcp/providers.yaml` from the bundled example and prints the next steps.
+
+### 2. Fill in your providers and API keys
+
+Open the generated file and uncomment/configure the providers you want to use:
 
 ```bash
 $EDITOR ~/.config/delegate-mcp/providers.yaml
 ```
 
-### 2. Export your API keys
-
-Put them in `~/.zshrc` (or your secret manager — Infisical, pass, etc.):
+Then export the corresponding API keys in `~/.zshrc` (or your secret manager — Infisical, pass, etc.):
 
 ```bash
 export ZAI_API_KEY="sk-zai-…"
@@ -54,12 +60,6 @@ export ZAI_API_KEY="sk-zai-…"
 ```
 
 ### 3. Register with Claude Code
-
-**Option A — via `.mcp.json`** (recommended for projects, committed to git):
-
-The `.mcp.json` at the root of this repo is already set up. Claude Code picks it up automatically when you open the project.
-
-**Option B — global install via CLI:**
 
 ```bash
 claude mcp add --scope user --transport stdio delegate \
@@ -73,6 +73,8 @@ claude mcp list
 ```
 
 You should see `delegate` connected. Open Claude Code (`claude`) and Sonnet will discover the tools automatically.
+
+> **Not configured yet?** If you skip steps 1–2 and Claude Code launches the server anyway, it starts in degraded mode and exposes a single `delegate_setup_required` tool. Call it (or ask Claude to call it) to get the exact setup instructions.
 
 ## Usage
 
