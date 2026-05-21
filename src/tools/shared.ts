@@ -1,5 +1,7 @@
 import { z } from "zod";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Router, RouteRequest, TaskType } from "../router.js";
+import { toMessage } from "../utils.js";
 
 /**
  * Common Zod schema for the input that any delegate_* tool accepts.
@@ -22,6 +24,9 @@ export const DelegateInputSchema = z.object({
   max_tokens: z.number().int().positive().optional().describe(
     "Optional cap on output tokens. Clamped to the provider's max.",
   ),
+  response_format: z.enum(["markdown", "json"]).default("markdown").describe(
+    "Output format: 'markdown' for human-readable (default), 'json' for machine-readable structured data",
+  ),
 });
 
 export type DelegateInput = z.infer<typeof DelegateInputSchema>;
@@ -31,17 +36,12 @@ export function buildUserMessage(input: DelegateInput): string {
   return `${input.task}\n\n---\nContext:\n${input.context}`;
 }
 
-export interface FormattedResult {
-  content: Array<{ type: "text"; text: string }>;
-  isError?: boolean;
-}
-
 export async function runDelegate(
   router: Router,
   taskType: TaskType,
   input: DelegateInput,
   systemPrompt: string,
-): Promise<FormattedResult> {
+): Promise<CallToolResult> {
   try {
     const req: RouteRequest = {
       taskType,
@@ -53,21 +53,37 @@ export async function runDelegate(
     };
     const result = await router.route(req);
 
-    const footer =
-      `\n\n---\n_Delegated to **${result.providerName}** (${result.modelUsed}), ` +
-      `${result.inputTokens} in / ${result.outputTokens} out` +
-      (result.failedProviders.length > 0
-        ? `, after failover from [${result.failedProviders.join(", ")}]`
-        : "") +
-      `._`;
+    const data = {
+      text: result.text,
+      provider: result.providerName,
+      model: result.modelUsed,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      failedProviders: result.failedProviders,
+    };
+
+    const formattedText = input.response_format === "json"
+      ? JSON.stringify(data, null, 2)
+      : result.text +
+        `\n\n---\n_Delegated to **${result.providerName}** (${result.modelUsed}), ` +
+        `${result.inputTokens} in / ${result.outputTokens} out` +
+        (result.failedProviders.length > 0
+          ? `, after failover from [${result.failedProviders.join(", ")}]`
+          : "") +
+        `._`;
 
     return {
-      content: [{ type: "text", text: result.text + footer }],
+      content: [{ type: "text", text: formattedText }],
+      structuredContent: data,
     };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
     return {
-      content: [{ type: "text", text: `Delegation failed: ${msg}` }],
+      content: [
+        {
+          type: "text",
+          text: `Delegation failed: ${toMessage(err)}. Use 'list_providers' to see available providers and their status. Try 'delegate_to' with an explicit 'provider_hint' if a specific provider is needed.`,
+        },
+      ],
       isError: true,
     };
   }

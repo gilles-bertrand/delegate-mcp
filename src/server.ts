@@ -1,16 +1,12 @@
 #!/usr/bin/env node
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-
 import { loadConfig } from "./config.js";
 import { buildRegistry } from "./providers/factory.js";
 import { Router } from "./router.js";
-import { buildTools, buildListProvidersTool } from "./tools/definitions.js";
+import { registerAllTools } from "./tools/definitions.js";
 import { log, setLogLevel } from "./logging.js";
+import { toMessage } from "./utils.js";
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -28,52 +24,33 @@ async function main(): Promise<void> {
 
   const router = new Router(registry, config.routing);
 
-  const tools = [
-    ...buildTools(router),
-    buildListProvidersTool(router, registry),
-  ];
-  const toolMap = new Map(tools.map((t) => [t.name, t]));
-
-  const server = new Server(
+  const server = new McpServer(
     { name: "delegate-mcp", version: "0.1.0" },
-    { capabilities: { tools: {} } },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      inputSchema: t.inputSchema,
-    })),
-  }));
+  registerAllTools(server, router, registry);
 
-  server.setRequestHandler(CallToolRequestSchema, async (req): Promise<any> => {
-    const tool = toolMap.get(req.params.name);
-    if (!tool) {
-      return {
-        content: [{ type: "text", text: `Unknown tool: ${req.params.name}` }],
-        isError: true,
-      };
-    }
+  // SIGUSR1 is reserved by Node.js for the debugger, so SIGHUP is used instead.
+  process.on("SIGHUP", () => {
     try {
-      return await tool.handler(req.params.arguments ?? {});
+      const newConfig = loadConfig();
+      const newRegistry = buildRegistry(newConfig.providers);
+      registry.clear();
+      for (const [name, client] of newRegistry) {
+        registry.set(name, client);
+      }
+      log.info("config reloaded via SIGHUP", { providers: [...registry.keys()] });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      log.error("tool handler threw", { tool: req.params.name, error: msg });
-      return {
-        content: [{ type: "text", text: `Tool error: ${msg}` }],
-        isError: true,
-      };
+      log.error("config reload failed", { error: toMessage(err) });
     }
   });
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  log.info("delegate-mcp ready on stdio", { tools: [...toolMap.keys()] });
+  log.info("delegate-mcp ready on stdio");
 }
 
 main().catch((err) => {
-  const msg = err instanceof Error ? err.message : String(err);
-  log.error("fatal startup error", { error: msg });
+  log.error("fatal startup error", { error: toMessage(err) });
   process.exit(1);
 });
