@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "delegate": {
+      "command": "npx",
+      "args": ["-y", "@triptyk/delegate-mcp"]
+    }
+  }
+}

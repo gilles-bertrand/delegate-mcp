@@ -4,14 +4,20 @@
   "description": "Generic multi-provider MCP delegate server for Claude Code. Sonnet orchestrates, cheap providers execute.",
   "type": "module",
   "bin": {
-    "delegate-mcp": "./dist/server.js"
+    "delegate-mcp": "dist/server.js"
   },
+  "files": [
+    "dist",
+    "providers.example.yaml"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/server.js",
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build",
+    "publish": "npm publish --access public",
     "test": "vitest run",
     "test:watch": "vitest"
   },

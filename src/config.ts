@@ -1,6 +1,7 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, copyFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { AppConfigSchema, type AppConfig } from "./schemas.js";
 
@@ -18,13 +19,24 @@ function resolveConfigPath(): string {
   return join(xdg, "delegate-mcp", "providers.yaml");
 }
 
+function bootstrapConfig(configPath: string): never {
+  const exampleSrc = join(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "providers.example.yaml",
+  );
+  mkdirSync(dirname(configPath), { recursive: true });
+  copyFileSync(exampleSrc, configPath);
+  throw new Error(
+    `No config found — created a starter at ${configPath}.\n` +
+      `Edit it, add your API keys to your environment, then restart.`,
+  );
+}
+
 export function loadConfig(): AppConfig {
   const path = resolveConfigPath();
   if (!existsSync(path)) {
-    throw new Error(
-      `Config file not found at ${path}. ` +
-        `Create one or set $DELEGATE_MCP_CONFIG.`,
-    );
+    bootstrapConfig(path);
   }
 
   const raw = readFileSync(path, "utf-8");

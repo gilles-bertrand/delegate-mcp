@@ -34,40 +34,36 @@ delegate-mcp
 
 ## Install
 
-### 1. Build
+### 1. Configure
+
+On first run, delegate-mcp automatically creates `~/.config/delegate-mcp/providers.yaml` from the bundled example. Just open it and fill in your providers:
 
 ```bash
-git clone <this-repo> ~/dev/delegate-mcp
-cd ~/dev/delegate-mcp
-npm install
-npm run build
-```
-
-### 2. Configure
-
-```bash
-mkdir -p ~/.config/delegate-mcp
-cp providers.example.yaml ~/.config/delegate-mcp/providers.yaml
 $EDITOR ~/.config/delegate-mcp/providers.yaml
 ```
 
-### 3. Export your API keys
+### 2. Export your API keys
 
 Put them in `~/.zshrc` (or your secret manager — Infisical, pass, etc.):
 
 ```bash
 export ZAI_API_KEY="sk-zai-…"
-# Later:
 # export MINIMAX_API_KEY="…"
 # export MOONSHOT_API_KEY="…"
 # export DEEPSEEK_API_KEY="…"
 ```
 
-### 4. Register with Claude Code
+### 3. Register with Claude Code
+
+**Option A — via `.mcp.json`** (recommended for projects, committed to git):
+
+The `.mcp.json` at the root of this repo is already set up. Claude Code picks it up automatically when you open the project.
+
+**Option B — global install via CLI:**
 
 ```bash
 claude mcp add --scope user --transport stdio delegate \
-  -- node /home/gilles/dev/delegate-mcp/dist/server.js
+  -- npx -y @triptyk/delegate-mcp
 ```
 
 Verify:
