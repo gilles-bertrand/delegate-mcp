@@ -1,0 +1,94 @@
+# delegate-mcp providers configuration
+# Location: ~/.config/delegate-mcp/providers.yaml
+# Override path with: export DELEGATE_MCP_CONFIG=/path/to/your/providers.yaml
+
+log_level: info  # debug | info | warn | error
+
+providers:
+  # ============================================================
+  # GLM (Z.AI) — included in your GLM Coding Plan flat fee
+  # ============================================================
+  glm:
+    base_url: https://api.z.ai/api/anthropic
+    api_key_env: ZAI_API_KEY
+    protocol: anthropic
+    models:
+      default: glm-4.6
+      cheap: glm-4.5-air
+    capabilities:
+      - code
+      - bulk
+      - long_context
+      - reasoning
+    max_tokens: 200000
+    cost_tier: 1
+    request_timeout_ms: 120000
+    enabled: true
+
+  # ============================================================
+  # Future providers — uncomment and add API keys to enable.
+  # The router automatically picks them up if they appear in
+  # the 'routing' lists below.
+  # ============================================================
+
+  # minimax:
+  #   base_url: https://api.minimaxi.chat/v1
+  #   api_key_env: MINIMAX_API_KEY
+  #   protocol: openai
+  #   models:
+  #     default: minimax-m2
+  #   capabilities: [bulk, long_context, ultra_long_context]
+  #   max_tokens: 1000000
+  #   cost_tier: 1
+  #   request_timeout_ms: 180000
+  #   enabled: false
+
+  # kimi:
+  #   base_url: https://api.moonshot.cn/v1
+  #   api_key_env: MOONSHOT_API_KEY
+  #   protocol: openai
+  #   models:
+  #     default: kimi-k2-0905
+  #     long: kimi-128k
+  #   capabilities: [code, reasoning, long_context]
+  #   max_tokens: 256000
+  #   cost_tier: 2
+  #   enabled: false
+
+  # deepseek:
+  #   base_url: https://api.deepseek.com/v1
+  #   api_key_env: DEEPSEEK_API_KEY
+  #   protocol: openai
+  #   models:
+  #     default: deepseek-chat
+  #     reasoner: deepseek-reasoner
+  #   capabilities: [code, reasoning]
+  #   max_tokens: 64000
+  #   cost_tier: 1
+  #   enabled: false
+
+  # ollama_local:
+  #   base_url: http://tpk-admin.local:11434/v1
+  #   api_key_env: OLLAMA_API_KEY   # set to "ollama" — placeholder, Ollama ignores it
+  #   protocol: openai
+  #   models:
+  #     default: qwen2.5-coder:32b
+  #   capabilities: [code, bulk]
+  #   max_tokens: 32000
+  #   cost_tier: 1
+  #   enabled: false
+
+# ============================================================
+# Routing strategy
+# ============================================================
+# Each task type lists providers in preferred order. Router tries the first;
+# on rate-limit (429) or server error (5xx), it falls back to the next.
+# Auth errors (401/403) do NOT trigger failover — they surface immediately.
+routing:
+  bulk:          [glm]
+  long_context:  [glm]   # later: [minimax, kimi, glm]
+  reasoning:     [glm]   # later: [deepseek, kimi]
+  code:          [glm]
+  default:       [glm]
+  failover: true
+  max_failover_attempts: 3
